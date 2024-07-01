@@ -3365,6 +3365,56 @@ def mse_loss(
     expanded_input, expanded_target = torch.broadcast_tensors(input, target)
     return torch._C._nn.mse_loss(expanded_input, expanded_target, _Reduction.get_enum(reduction))
 
+def wmse_loss(
+    input: torch.Tensor,
+    target: torch.Tensor,
+    weights: torch.Tensor,
+    size_average: Optional[bool] = None,
+    reduce: Optional[bool] = None,
+    reduction: str = "mean",
+) -> torch.Tensor:
+    r"""wmse_loss(input, target, weights, size_average=None, reduce=None, reduction='mean') -> Tensor
+
+    Calculates the weighted mean squared error.
+
+    Args:
+        input (torch.Tensor): Predicted values.
+        target (torch.Tensor): Ground truth values.
+        weights (torch.Tensor): Weights for each sample.
+        size_average (bool, optional): Deprecated (use reduction).
+        reduce (bool, optional): Deprecated (use reduction).
+        reduction (str, optional): Specifies how to reduce the loss. 
+            Can be 'none', 'mean', or 'sum'. Default is 'mean'.
+
+    Returns:
+        torch.Tensor: Weighted Mean Squared Error loss.
+
+    Example:
+        # Assuming inputs, targets, and weights are torch tensors
+        loss = wmse_loss(inputs, targets, weights)
+    """
+    if has_torch_function_variadic(input, target):
+        return handle_torch_function(
+            wmse_loss, (input, target, weights), input, target, size_average=size_average, reduce=reduce, reduction=reduction
+        )
+    if not (target.size() == input.size()):
+        warnings.warn(
+            f"Using a target size ({target.size()}) that is different from the input size ({input.size()}). "
+            "This may lead to incorrect results due to broadcasting. "
+            "Please ensure they have the same size.",
+            stacklevel=2,
+        )
+    if size_average is not None or reduce is not None:
+        reduction = _Reduction.legacy_get_string(size_average, reduce)
+
+    if weights.size() != squared_errors.size():
+        raise ValueError("Weights and squared_errors must have the same size.")
+
+    # Calculate weighted squared errors
+    squared_errors = torch.pow(input - target, 2)
+    weighted_squared_errors = squared_errors * weights
+
+    return torch._C._nn.mse_loss(weighted_squared_errors, reduction)
 
 def margin_ranking_loss(
     input1: Tensor,
