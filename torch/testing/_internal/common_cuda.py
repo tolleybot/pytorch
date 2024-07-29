@@ -33,6 +33,12 @@ SM90OrLater = LazyVal(lambda: torch.cuda.is_available() and torch.cuda.get_devic
 
 IS_JETSON = LazyVal(lambda: torch.cuda.is_available() and torch.cuda.get_device_capability() in [(7, 2), (8, 7)])
 
+def CDNA2OrLater():
+    if TEST_WITH_ROCM:
+        gcn_arch_name = torch.cuda.get_device_properties('cuda').gcnArchName
+        return any(arch in gcn_arch_name for arch in {"gfx90a", "gfx940", "gfx941", "gfx942"})
+    return False
+
 def evaluate_gfx_arch_exact(matching_arch):
     if not torch.cuda.is_available():
         return False
@@ -47,7 +53,7 @@ def evaluate_platform_supports_flash_attention():
     if TEST_WITH_ROCM:
         return evaluate_gfx_arch_exact('gfx90a:sramecc+:xnack-') or evaluate_gfx_arch_exact('gfx942:sramecc+:xnack-')
     if TEST_CUDA:
-        return not IS_WINDOWS and SM80OrLater
+        return (not IS_WINDOWS or int(torch.version.cuda.split('.')[0]) >= 12) and SM80OrLater
     return False
 
 def evaluate_platform_supports_efficient_attention():
