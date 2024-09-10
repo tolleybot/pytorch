@@ -15,7 +15,7 @@ set(USE_CUSPARSELT ON)
 
 add_executable(project1 main.cpp)
 
-#link_directories(/opt/conda/lib)
+link_directories(/opt/conda/lib)
 
 target_link_libraries(project1
     ${TORCH_LIBRARIES}
