@@ -14,7 +14,10 @@
   },
   "runArgs": [
     "--gpus",
-    "all"
+    "all",
+    "--privileged",    
+    "--cap-add=SYS_PTRACE",
+    "--cap-add=SYS_ADMIN",
   ],
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],

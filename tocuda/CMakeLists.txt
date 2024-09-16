@@ -11,18 +11,18 @@ find_package(CUDA REQUIRED)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
+if(CUDA_FOUND)
+  message(STATUS "CUDA found, enabling CUDA support")
+  add_definitions(-DUSE_CUDA)
+  enable_language(CUDA)
+endif()
+
 add_executable(project1 main.cpp)
 
 #link_directories(/opt/conda/lib)
 
 target_link_libraries(project1
-    ${TORCH_LIBRARIES}
-    ${CUDA_LIBRARIES}
-    ${BLAS_LIBRARIES}
-    ${LAPACK_LIBRARIES}
-    CUDA::cublas
-    CUDA::cufft
-    cusparse cupti)
+    ${TORCH_LIBRARIES})
 
     # Print the directory for cublas and cufft
     message("CUBLAS directory: ${CUDA_TOOLKIT_ROOT_DIR}/lib64")

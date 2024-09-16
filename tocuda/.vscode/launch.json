@@ -5,20 +5,116 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/project1",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "/opt/conda/bin/python",
+            "processId": "${command:pickProcess}",          
+            "MIMode": "gdb", 
+            "miDebuggerPath": "/usr/bin/gdb",    
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "logging": {
+                    "moduleLoad": true
+                }
+        },
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/performance.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "LD_LIBRARY_PATH": "/opt/conda/lib/:/opt/conda/lib64:/workspaces/pytorch/build/lib:${env:LD_LIBRARY_PATH}"
+            },
+            "envFile": "${workspaceFolder}/.env" 
+        },
+        {
             "name": "CUDA C++: Launch",
             "type": "cuda-gdb",
             "request": "launch",
             "program": "/workspaces/pytorch/tocuda/build/project1",
-            "environment": [ {
-            "name": "LD_LIBRARY_PATH",
-            "value": "/opt/conda/lib/:${env:LD_LIBRARY_PATH}"
-            }
-        ]
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "/opt/conda/lib/:/workspaces/pytorch/build/lib:${env:LD_LIBRARY_PATH}"
+                }
+            ]
         },
         {
             "name": "CUDA C++: Attach",
             "type": "cuda-gdb",
-            "request": "attach"
-        }
+            "request": "attach",
+            "program": "/opt/conda/bin/python",  
+            "processId": "${command:cuda.pickProcess}",
+            "stopAtEntry": false,
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "/opt/conda/lib/:/workspaces/pytorch/build/lib:${env:LD_LIBRARY_PATH}" 
+                },
+                {
+                    "name": "CUDA_LAUNCH_BLOCKING",
+                    "value": "1"
+                }
+            ]
+        },
+        {
+
+            "name": "Python: Run with CUDA-GDB",
+            "type": "cuda-gdb",
+            "request": "launch",
+            "program": "/opt/conda/bin/python",  
+            "args": ["performance.py"], 
+            "cwd": "${workspaceFolder}",      
+            "stopAtEntry": false,     
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "/opt/conda/lib:/workspaces/pytorch/build/lib:${env:LD_LIBRARY_PATH}"
+                },
+                {
+                    "name": "CUDA_LAUNCH_BLOCKING",
+                    "value": "1"
+                }
+            ]
+        },
+
+  
     ]
 }
