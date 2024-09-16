@@ -7,7 +7,7 @@ double measure_gpu_transfer_time(torch::Tensor tensor, int num_iterations) {
     // Function to move tensor to GPU
     auto move_to_gpu = [](torch::Tensor& tensor) {
         tensor = tensor.to(torch::kCUDA);
-        torch::cuda::synchronize();  // Ensure the operation has completed
+     //   torch::cuda::synchronize();  // Ensure the operation has completed
     };
 
     // Start timing
@@ -15,7 +15,7 @@ double measure_gpu_transfer_time(torch::Tensor tensor, int num_iterations) {
     for (int i = 0; i < num_iterations; i++) {
         move_to_gpu(tensor);  // Move the tensor to the GPU
     }
-    torch::cuda::synchronize();  // Synchronize after the last transfer
+   // torch::cuda::synchronize();  // Synchronize after the last transfer
 
     // Stop timing
     auto end = std::chrono::high_resolution_clock::now();
@@ -34,35 +34,50 @@ void is_contiguous(const std::string& name,  torch::Tensor& tensor) {
 }
 
 int main() {
-    int rows = 327680;
+    //int rows = 327680;
+    int rows = 32768;
     int cols = 2000;
     int num_iterations = 10;
 
-    // Step 1: Create contiguous and non-contiguous tensors
-    torch::Tensor tensor_r = torch::randn({rows, cols}, torch::kFloat32);  // Contiguous tensor
-    torch::Tensor tensor_f = torch::randn({rows, cols}, torch::kFloat32).transpose(0,1);  // Non-contiguous tensor due to transpose
+    // TensorOptions object with the desired data type
+    auto options = torch::TensorOptions().dtype(torch::kFloat32);
+    // Create tensor with fortran memory layout
+    torch::Tensor tensor_nc = torch::empty_strided({rows, cols}, {1, rows}, options);
+    // In-place operation to fill with random values
+    tensor_nc.normal_(); 
 
-    is_contiguous("tensor_r", tensor_r);
-    is_contiguous("tensor_f", tensor_f);
-    
+ 
+     auto options2 = torch::TensorOptions().dtype(torch::kFloat32);
+    // Create contiguous and non-contiguous tensors
+    torch::Tensor tensor_cont = torch::randn({rows, cols}, options2); 
+
+    is_contiguous("tensor_nc", tensor_nc);
+    is_contiguous("tensor_cont", tensor_cont);   
+   
 
     // Step 2: Slice both tensors
-    torch::Tensor slice_r = tensor_r.slice(0, 10000, 50000);  // Contiguous slice
-    torch::Tensor slice_f = tensor_f.slice(0, 10000, 50000);  // Non-contiguous slice
+    torch::Tensor slice_cont = tensor_cont.slice(0, 10000, 50000);  // Contiguous slice
+    torch::Tensor slice_nc = tensor_nc.slice(0, 10000, 50000);  // Non-contiguous slice
 
-    is_contiguous("slice_r", slice_r);
-    is_contiguous("slice_f", slice_f);
+    is_contiguous("slice_nc", slice_nc);
+    is_contiguous("slice_cont", slice_cont);
+    
+
+
+    #if 1
 
     // warmup
-    measure_gpu_transfer_time(slice_r, 10);
+    measure_gpu_transfer_time(slice_cont, 10);
 
     // Step 4: Measure and print time for moving contiguous tensor to GPU
-    double avg_time_contiguous = measure_gpu_transfer_time(slice_r, num_iterations);
+    double avg_time_contiguous = measure_gpu_transfer_time(slice_cont, num_iterations);
     std::cout << "Average time taken to move contiguous tensor to GPU: " << avg_time_contiguous << " seconds" << std::endl;
 
     // Step 5: Measure and print time for moving non-contiguous tensor to GPU
-    double avg_time_non_contiguous = measure_gpu_transfer_time(slice_f, num_iterations);
+    double avg_time_non_contiguous = measure_gpu_transfer_time(slice_nc, num_iterations);
     std::cout << "Average time taken to move non-contiguous tensor to GPU: " << avg_time_non_contiguous << " seconds" << std::endl;
+
+    #endif
 
     return 0;
 }
