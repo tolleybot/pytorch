@@ -1,0 +1,25 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "build",
+        "type": "shell",
+        "command": "python",
+        "args": [
+          "setup.py",
+          "develop"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "problemMatcher": [],
+        "options": {
+          "env": {
+            "DEBUG": "0",
+            "USE_DEBUGPY": "0"
+          }
+        }
+      }
+    ]
+  }

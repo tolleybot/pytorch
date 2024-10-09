@@ -1,0 +1,24 @@
+{
+	"files": [
+		{
+			"path": "torchgen/packaged/autograd/templates/python_variable_methods.cpp",
+			"bookmarks": [
+				{
+					"line": 480,
+					"column": 32,
+					"label": "python binding for cuda() function"
+				}
+			]
+		},
+		{
+			"path": "torch/csrc/autograd/python_variable_indexing.cpp",
+			"bookmarks": [
+				{
+					"line": 340,
+					"column": 41,
+					"label": "THPVariable_getitem, may be the binding between python and c++ for slicing"
+				}
+			]
+		}
+	]
+}
