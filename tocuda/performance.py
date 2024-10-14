@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import timeit
 import os
+import argparse
 
 print(torch.__version__)
 
@@ -23,98 +24,88 @@ def get_device(verbose=True):
         return torch.device("cpu")
 
 
-def create_tensors(rows=327680, cols=2000, slice_start=10_000, slice_end=50_000):
-    """
-    Creates two sliced tensors from NumPy arrays with different memory layouts (Fortran and C-style).
-
-    Args:
-        rows (int): Number of rows for the arrays. Default is 327680.
-        cols (int): Number of columns for the arrays. Default is 2000.
-        slice_start (int): Start index for slicing the tensors. Default is 10,000.
-        slice_end (int): End index for slicing the tensors. Default is 50,000.
-
-    Returns:
-        tensor1 (torch.Tensor): A contiguous slice from a Fortran-order (column-major) NumPy array.
-        tensor2 (torch.Tensor): A contiguous slice from a C-order (row-major) NumPy array.
-    """
-    # Create NumPy arrays: Fortran-contiguous (column-major) and C-contiguous (row-major)
-    np_arr_fortran = np.asfortranarray(np.random.randn(rows, cols).astype(np.float32))
-    np_arr_c = np.random.randn(rows, cols).astype(np.float32)
-
-    # Convert NumPy arrays to PyTorch tensors
-    tensor1 = torch.from_numpy(np_arr_fortran)[slice_start:slice_end]  # Slice the Fortrans tensor
-    tensor2 = torch.from_numpy(np_arr_c)[slice_start:slice_end]        # Slice the C-contiguous tensor
-
-    return tensor1, tensor2
+def move_to_gpu(tensor):
+    tensor.cuda()
 
 
-def compare_sizes():
+def benchmark_gpu_transfer(tensor, number=10):
+    def transfer_and_sync():
+        move_to_gpu(tensor)
 
-    rows = 327680
-    cols = 2000
-    slice_start = 10_000
-    slice_end = 50_000
-    rows_1 = rows + 1
-    rows_2 = rows - 1
-
-    tensor1 = np.asfortranarray(np.random.randn(rows_1, cols).astype(np.float32))
-    tensor2 = np.asfortranarray(np.random.randn(rows_2, cols).astype(np.float32))
-    tensor1 = torch.from_numpy(tensor1)[slice_start:slice_end]
-    tensor2 = torch.from_numpy(tensor2)[slice_start:slice_end]
-
-    def move_to_gpu(tensor):
-        tensor.cuda()
-
-    number = 1
-
-    move_to_gpu(tensor1)
-
-    move_to_gpu(tensor2)
-
-    execution_time_1 = timeit.timeit(lambda: move_to_gpu(tensor1), number=number)
-    average_time_1 = execution_time_1 / number
-
-    execution_time_2 = timeit.timeit(lambda: move_to_gpu(tensor2), number=number)
-    average_time_2 = execution_time_2 / number
-
-    # Step 8: Print the results
-    print(f"Average time for rows {rows_1}: {average_time_1:.6f} seconds")
-    print(f"Average time for rows {rows_2}: {average_time_2:.6f} seconds")
-
-
-def compare_tensors():
-    nc_tensor, cont_tensor = create_tensors(rows=32768)
-
-    print("Is the nc_tensor tensor contiguous after Slice? ", nc_tensor.is_contiguous())
-    print("Is the cont_tensor tensor contiguous after Slice? ", cont_tensor.is_contiguous())
-
-    def move_to_gpu(tensor):
-        tensor.cuda()
-
-    number = 1
-
-    move_to_gpu(nc_tensor)
-
-    move_to_gpu(cont_tensor)
-
-    # Step 6: Use timeit to time the execution of moving a contiguous tensor to the GPU
-    # execution_time = timeit.timeit(lambda: move_to_gpu(tensor_contiguous), number=number)
-    # average_time = execution_time / number
-
-    # Step 7: Use timeit to time the execution of moving a non-contiguous tensor to the GPU
-    execution_time_nc = timeit.timeit(lambda: move_to_gpu(nc_tensor), number=number)
-    average_time_nc = execution_time_nc / number
-
-    execution_time = timeit.timeit(lambda: move_to_gpu(cont_tensor), number=number)
+    execution_time = timeit.timeit(transfer_and_sync, number=number)
     average_time = execution_time / number
+    return average_time
+
+
+def create_tensors(rows, cols):
+    # Create Fortran-ordered array (non-contiguous in PyTorch)
+    fortran_arr = np.asfortranarray(np.random.randn(rows, cols).astype(np.float32))
+
+    # Create C-ordered array (contiguous in PyTorch)
+    regular_arr = np.random.randn(rows, cols).astype(np.float32)
+
+    # Convert both NumPy arrays to PyTorch tensors
+    non_contiguous_tensor = torch.from_numpy(fortran_arr)
+    contiguous_tensor = torch.from_numpy(regular_arr)
+
+    return non_contiguous_tensor, contiguous_tensor
+
+
+def compare_sizes(rows, cols=2000):
+    assert (
+        rows >= 50_000
+    ), "Rows must be at least 50,000 to support slicing from 10,000 to 50,000."
+
+    non_contiguous_tensor, contiguous_tensor = create_tensors(rows, cols)
+    non_contiguous_slice = non_contiguous_tensor[10_000:50_000]
+    contiguous_slice = contiguous_tensor[10_000:50_000]
+
+    iter = 1
+
+   # avg_time_contiguous = benchmark_gpu_transfer(contiguous_slice, number=iter)
+    avg_time_non_contiguous = benchmark_gpu_transfer(non_contiguous_slice, number=iter)
 
     # Step 8: Print the results
-    print(f"Average time taken to move contiguous tensor to GPU: {average_time:.6f} seconds")
-    print(f"Average time taken to move non-contiguous tensor to GPU: {average_time_nc:.6f} seconds")
+   # print(f"Blocking: {non_blocking}")
+   # print(f"Average time for rows {rows} contiguous: {int(avg_time_contiguous * 1000)} ms")
+    print(f"Average time for rows {rows} non-contigous: {int(avg_time_non_contiguous * 1000)} ms")
+
+
+def compare_sizes2(rows, cols):
+
+    non_contiguous_tensor, contiguous_tensor = create_tensors(rows, cols)
+
+    iter = 1
+
+   # avg_time_contiguous = benchmark_gpu_transfer(contiguous_slice, number=iter)
+    avg_time_non_contiguous = benchmark_gpu_transfer(non_contiguous_tensor, number=iter)
+
+    # Step 8: Print the results
+   # print(f"Blocking: {non_blocking}")
+   # print(f"Average time for rows {rows} contiguous: {int(avg_time_contiguous * 1000)} ms")
+    print(f"Average time for rows {rows} non-contigous: {int(avg_time_non_contiguous * 1000)} ms")
+
+# python performance.py --rows 327680 --cols 1000
+# Average time for rows 327680 non-contigous: 621 ms
+# python performance.py --rows 327681 --cols 1000
+# Average time for rows 327681 non-contigous: 477 ms
 
 
 def main():
-    compare_sizes()
+    parser = argparse.ArgumentParser(description="Benchmark GPU transfer performance.")
+    parser.add_argument("--rows", type=int, required=True, help="Number of rows for the tensor.")
+    parser.add_argument("--cols", type=int, required=True, help="Number of columns for the tensor.")
+    args = parser.parse_args()
+
+    compare_sizes(args.rows, args.cols)
+    # compare_sizes(327680 - 2)
+    # compare_sizes(327680 - 3)
+
+    # compare_sizes(327680)
+    # compare_sizes(327680 + 1)
+
+    # compare_sizes(327680 + 2)
+    # compare_sizes(327680 + 3)
 
 
 if __name__ == "__main__":
