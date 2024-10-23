@@ -59,6 +59,8 @@
             "program": "${workspaceFolder}/performance.py",
             "console": "integratedTerminal",
             "justMyCode": false,
+            "args": ["--rows", 
+             "327680", "--cols", "1000"],
             "env": {
                 "LD_LIBRARY_PATH": "/opt/conda/lib/:/opt/conda/lib64:/workspaces/pytorch/build/lib:${env:LD_LIBRARY_PATH}"
             },

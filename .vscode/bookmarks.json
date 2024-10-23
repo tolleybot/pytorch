@@ -19,6 +19,101 @@
 					"label": "THPVariable_getitem, may be the binding between python and c++ for slicing"
 				}
 			]
+		},
+		{
+			"path": "aten/src/ATen/native/cuda/Copy.cu",
+			"bookmarks": [
+				{
+					"line": 0,
+					"column": 0,
+					"label": "cuda copy is here"
+				},
+				{
+					"line": 256,
+					"column": 14,
+					"label": "copy_requires_temporaries: flags to convert to contiguouis"
+				},
+				{
+					"line": 292,
+					"column": 20,
+					"label": "copy_kernel_cuda"
+				},
+				{
+					"line": 417,
+					"column": 3,
+					"label": "memcpy_and_sync"
+				}
+			]
+		},
+		{
+			"path": "c10/cuda/CUDAFunctions.h",
+			"bookmarks": [
+				{
+					"line": 76,
+					"column": 45,
+					"label": "probably memcpy_and_sync implementation"
+				}
+			]
+		},
+		{
+			"path": "aten/src/ATen/TensorIterator.h",
+			"bookmarks": [
+				{
+					"line": 782,
+					"column": 36,
+					"label": "TensorIteratorConfig"
+				}
+			]
+		},
+		{
+			"path": "aten/src/ATen/TensorIterator.cpp",
+			"bookmarks": [
+				{
+					"line": 1269,
+					"column": 69,
+					"label": "TensorIteratorBase::compute_strides"
+				},
+				{
+					"line": 1564,
+					"column": 21,
+					"label": "TensorIterator:build, where the strides are determined"
+				}
+			]
+		},
+		{
+			"path": "aten/src/ATen/native/Copy.cpp",
+			"bookmarks": [
+				{
+					"line": 139,
+					"column": 30,
+					"label": "copy_impl which calls our \"copy_sub\" dispatch function"
+				},
+				{
+					"line": 349,
+					"column": 11,
+					"label": "copy_ which calls copy_impl"
+				}
+			]
+		},
+		{
+			"path": "aten/src/ATen/core/TensorBase.h",
+			"bookmarks": [
+				{
+					"line": 149,
+					"column": 22,
+					"label": "to() definition"
+				}
+			]
+		},
+		{
+			"path": "aten/src/ATen/core/Tensor.cpp",
+			"bookmarks": [
+				{
+					"line": 40,
+					"column": 26,
+					"label": "to() implementation"
+				}
+			]
 		}
 	]
 }

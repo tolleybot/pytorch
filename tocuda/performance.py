@@ -4,7 +4,8 @@ import timeit
 import os
 import argparse
 
-print(torch.__version__)
+print(f"PyTorch version: {torch.__version__}")
+print(f"PyTorch installation path: {torch.__file__}")
 
 print("Process ID:", os.getpid())
 
@@ -24,6 +25,43 @@ def get_device(verbose=True):
         return torch.device("cpu")
 
 
+def check_page_alignment_issues(tensor):
+    page_size = os.sysconf('SC_PAGE_SIZE')
+    element_size = tensor.element_size()
+    shape = tensor.shape
+    strides = tensor.stride()
+
+    total_elements = tensor.numel()
+    total_size_bytes = total_elements * element_size
+
+    total_size_page_aligned = (total_size_bytes % page_size == 0)
+
+    if len(shape) >= 2:
+        row_stride_elements = strides[0]
+        row_stride_bytes = row_stride_elements * element_size
+        row_size_bytes = row_stride_bytes  # Size in bytes between the start of row n and row n+1
+
+        row_size_page_aligned = (row_size_bytes % page_size == 0)
+    else:
+        row_size_bytes = None
+        row_size_page_aligned = False
+
+    print(f"Total data size: {total_size_bytes} bytes")
+    print(f"Total data size aligns with page size: {total_size_page_aligned}")
+
+    if row_size_bytes is not None:
+        print(f"Row size in bytes: {row_size_bytes}")
+        print(f"Row size aligns with page size: {row_size_page_aligned}")
+    else:
+        print("Tensor is not at least 2-dimensional; cannot check row size alignment.")
+
+    # Return a dictionary with the results
+    return {
+        'total_size_page_aligned': total_size_page_aligned,
+        'row_size_page_aligned': row_size_page_aligned
+    }
+
+
 def move_to_gpu(tensor):
     tensor.cuda()
 
@@ -31,6 +69,9 @@ def move_to_gpu(tensor):
 def benchmark_gpu_transfer(tensor, number=10):
     def transfer_and_sync():
         move_to_gpu(tensor)
+
+    if not tensor.is_contiguous():
+        print("Python: Tensor is NOT contiguous.")
 
     execution_time = timeit.timeit(transfer_and_sync, number=number)
     average_time = execution_time / number
@@ -48,6 +89,8 @@ def create_tensors(rows, cols):
     non_contiguous_tensor = torch.from_numpy(fortran_arr)
     contiguous_tensor = torch.from_numpy(regular_arr)
 
+    check_page_alignment_issues(non_contiguous_tensor)
+
     return non_contiguous_tensor, contiguous_tensor
 
 
@@ -60,14 +103,17 @@ def compare_sizes(rows, cols=2000):
     non_contiguous_slice = non_contiguous_tensor[10_000:50_000]
     contiguous_slice = contiguous_tensor[10_000:50_000]
 
-    iter = 1
+    iter = 5
 
-   # avg_time_contiguous = benchmark_gpu_transfer(contiguous_slice, number=iter)
+   
+   # warmup
+    _ = benchmark_gpu_transfer(non_contiguous_slice, number=1)
+    avg_time_contiguous = benchmark_gpu_transfer(contiguous_slice, number=iter)
     avg_time_non_contiguous = benchmark_gpu_transfer(non_contiguous_slice, number=iter)
 
     # Step 8: Print the results
    # print(f"Blocking: {non_blocking}")
-   # print(f"Average time for rows {rows} contiguous: {int(avg_time_contiguous * 1000)} ms")
+    print(f"Average time for rows {rows} contiguous: {int(avg_time_contiguous * 1000)} ms")
     print(f"Average time for rows {rows} non-contigous: {int(avg_time_non_contiguous * 1000)} ms")
 
 
@@ -98,7 +144,7 @@ def main():
     args = parser.parse_args()
 
     compare_sizes(args.rows, args.cols)
-    # compare_sizes(327680 - 2)
+    compare_sizes(args.rows - 1, args.cols)
     # compare_sizes(327680 - 3)
 
     # compare_sizes(327680)
