@@ -52,8 +52,13 @@ ARG PYTHON_VERSION=3.11
 ARG CUDA_PATH=cu121
 ARG CUDA_CHANNEL=nvidia
 ARG INSTALL_CHANNEL=whl/nightly
+
+# Force classic solver so conda can start without importing libmamba plugin
+ENV CONDA_SOLVER=classic
 # Automatically set by buildx
-RUN /opt/conda/bin/conda update -y -n base -c defaults conda
+#RUN /opt/conda/bin/conda update -y -n base -c defaults conda
+RUN /opt/conda/bin/conda update -y -n base -c conda-forge conda && \
+    /opt/conda/bin/conda install -y -n base -c conda-forge conda-libmamba-solver
 RUN /opt/conda/bin/conda install -y python=${PYTHON_VERSION}
 
 ARG TARGETPLATFORM
