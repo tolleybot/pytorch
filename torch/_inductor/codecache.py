@@ -2371,6 +2371,10 @@ end
                         #   ✗ V100 (sm_70), T4 (sm_75) - missing sm_80 instructions
                         #
                         # For maximum portability, compile on the oldest GPU you need to support.
+                        #
+                        # Strip 'a' suffix from architecture (e.g., "90a" -> "90") for numeric comparison
+                        # and gencode string generation. The 'a' suffix is needed for cutlass but not
+                        # for ptxas -gencode flags.
                         current_arch_int = int(current_arch.replace("a", ""))
                         compatible_archs = [
                             arch for arch in target_archs
@@ -2397,6 +2401,20 @@ end
                                 "-gencode",
                                 f"arch=compute_{arch},code=sm_{arch}",
                             ])
+
+                        # Triton may generate PTX with .target directives containing 'a' suffix (e.g., sm_90a)
+                        # but ptxas only accepts sm_90 for compilation. Post-process the PTX file to strip
+                        # the 'a' suffix from .target directives.
+                        with open(asm_file, 'r') as f:
+                            ptx_content = f.read()
+
+                        # Replace .target sm_XXa with .target sm_XX
+                        import re
+                        ptx_content = re.sub(r'\.target\s+sm_(\d+)a\b', r'.target sm_\1', ptx_content)
+
+                        # Write back the modified PTX
+                        with open(asm_file, 'w') as f:
+                            f.write(ptx_content)
 
                         cmd = [
                             _cuda_compiler(),
