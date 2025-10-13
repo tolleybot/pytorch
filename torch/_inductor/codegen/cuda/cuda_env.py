@@ -1,5 +1,6 @@
 import functools
 import logging
+import os
 import shutil
 from typing import Optional
 
@@ -16,6 +17,17 @@ log = logging.getLogger(__name__)
 @functools.lru_cache(1)
 def get_cuda_arch() -> Optional[str]:
     try:
+        # Check if cross-compiling with TRITON_TARGET_ARCH override
+        # This allows compiling on one GPU architecture for deployment on another
+        if target_arch_override := os.getenv("TRITON_TARGET_ARCH"):
+            try:
+                return str(int(target_arch_override))
+            except ValueError:
+                log.warning(
+                    "Invalid TRITON_TARGET_ARCH value: %s. Ignoring override.",
+                    target_arch_override
+                )
+
         cuda_arch = config.cuda.arch
         if cuda_arch is None:
             # Get Compute Capability of the first Visible device
