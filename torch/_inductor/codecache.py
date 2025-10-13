@@ -2385,22 +2385,13 @@ end
                         if not compatible_archs:
                             compatible_archs = [str(current_arch_int)]
 
-                        # Build gencode flags for multiple architectures
-                        gencode_flags = []
-                        # Always include PTX for the highest arch as a fallback
-                        # This allows JIT compilation for even newer architectures not in the list
-                        highest_arch = max(compatible_archs, key=lambda x: int(x))
-                        gencode_flags.extend([
+                        # Build gencode flags for PTX-only approach
+                        # Use the current architecture for PTX generation (as that's what Triton generated)
+                        # This PTX will be JIT-compiled at runtime for compatible architectures >= current_arch
+                        gencode_flags = [
                             "-gencode",
-                            f"arch=compute_{highest_arch},code=compute_{highest_arch}",
-                        ])
-
-                        # Include SASS for each compatible target architecture
-                        for arch in compatible_archs:
-                            gencode_flags.extend([
-                                "-gencode",
-                                f"arch=compute_{arch},code=sm_{arch}",
-                            ])
+                            f"arch=compute_{current_arch_int},code=compute_{current_arch_int}",
+                        ]
 
                         # TODO: File issue with Triton about generating PTX with 'a' suffix in .target directives
                         # Triton may generate PTX with .target directives containing 'a' suffix (e.g., sm_90a)
