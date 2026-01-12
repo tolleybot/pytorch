@@ -1,0 +1,69 @@
+# Docker Compose for ONNX Runtime Diagnostics
+# =============================================
+#
+# Usage:
+#   docker-compose run diagnostics                    # Run environment check
+#   docker-compose run diagnostics python test_gil_detection.py
+#   docker-compose run diagnostics python onnx_session_diagnostics.py --model /models/your_model.onnx
+#
+# Or start interactive shell:
+#   docker-compose run diagnostics bash
+
+version: '3.8'
+
+services:
+  diagnostics:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Adjust these to match your CUDA version (check with: nvidia-smi)
+        CUDA_VERSION: "12.1.0"
+        CUDNN_VERSION: "8"
+        UBUNTU_VERSION: "22.04"
+    
+    image: onnx-diagnostics:latest
+    
+    # Enable GPU access
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  # Use all GPUs, or specify: count: 2
+              capabilities: [gpu]
+    
+    # Mount your models directory
+    volumes:
+      - ${MODELS_DIR:-./models}:/models:ro
+      # Mount output directory for profiles and results
+      - ${OUTPUT_DIR:-./output}:/output
+    
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
+    
+    # Working directory
+    working_dir: /app
+    
+    # Environment variables
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-all}
+      # Reduce TensorFlow/CUDA logging noise if present
+      - TF_CPP_MIN_LOG_LEVEL=2
+    
+    # Default command
+    command: python check_environment.py
+
+  # Alternative service for running specific tests
+  gil-test:
+    extends: diagnostics
+    command: python test_gil_detection.py
+
+  full-diagnostics:
+    extends: diagnostics
+    command: >
+      python onnx_session_diagnostics.py 
+      --model ${MODEL_PATH:-/models/model.onnx}
+      --num-gpus ${NUM_GPUS:-}
