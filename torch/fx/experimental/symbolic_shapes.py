@@ -5898,8 +5898,10 @@ class ShapeEnv:
 
             # Skip guards that involve symbols with only ephemeral sources.
             # These symbols are created inside the graph (e.g., nested int symbols
-            # from jagged nested tensors) and cannot be guarded on.
+            # from jagged nested tensors) and represent internal computations whose
+            # values are deterministic given the inputs. Guarding on them is redundant.
             if any(s in symbols_with_only_ephemeral_sources for s in expr.free_symbols):
+                self.log.debug("Skipping guard with ephemeral-only symbols: %s", expr)
                 return
 
             issued.add(expr)
