@@ -2401,6 +2401,19 @@ class AlgorithmSelectorCache(PersistentCache):
         for preprocessing_fn in self.preprocessing_fns:
             choices = preprocessing_fn(choices)
 
+        # Reorder choices to precompile/benchmark stable kernels (ATen/cuBLAS) BEFORE
+        # potentially unstable CUTLASS kernels. This ensures valid fallback timings
+        # exist before any CUTLASS kernel can corrupt CUDA context (issue #171094).
+        def choice_priority(c: ChoiceCaller) -> int:
+            if isinstance(c, ExternKernelCaller):
+                return 0  # ATen/cuBLAS first
+            elif isinstance(c, CUDATemplateCaller):
+                return 2  # CUTLASS last
+            else:
+                return 1  # Triton and others in the middle
+
+        choices = sorted(choices, key=choice_priority)
+
         # Templates selected with input_gen_fns require specific input data to avoid IMA
         # Passing custom input gen fns to benchmark_fusion NYI, so skip deferred template selection
         # TODO(jgong5): support multi-template on CPU
