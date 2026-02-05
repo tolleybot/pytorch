@@ -698,6 +698,23 @@ class CUDABenchmarkRequest(GPUDeviceBenchmarkMixin, BenchmarkRequest):
         self.source_file: str = ""
         self.hash_key, self.source_file = CUDACodeCache.write(self.source_code, "so")
 
+    def __getstate__(self):
+        """Serialize state for pickling, excluding non-serializable DLL and workspace."""
+        state = self.__dict__.copy()
+        # DLL contains ctypes function pointers that can't be pickled.
+        # The subprocess will reload the DLL via ensure_dll_loaded().
+        state["DLL"] = None
+        # Workspace is a CUDA tensor that can't be pickled.
+        state["workspace"] = None
+        return state
+
+    def __setstate__(self, state):
+        """Restore state after unpickling."""
+        self.__dict__.update(state)
+        # DLL and workspace will be reinitialized when needed
+        self.DLL = None
+        self.workspace = None
+
     def precompile(self):
         """
         Precompile the CUDA source code to populate the CUDACodeCache.
