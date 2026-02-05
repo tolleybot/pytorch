@@ -2931,6 +2931,21 @@ class AlgorithmSelectorCache(PersistentCache):
         choices: Sequence[ChoiceCaller],
         autotune_args: AutotuneArgs,
     ) -> dict[ChoiceCaller, float]:
+        from torch._inductor.codegen.cuda.cuda_kernel import CUDATemplateCaller
+
+        # Reorder choices to benchmark stable kernels (ATen/cuBLAS) BEFORE potentially
+        # unstable CUTLASS kernels. This ensures we have valid fallback timings before
+        # any CUTLASS kernel can corrupt the CUDA context (issue #171094).
+        def choice_priority(c: ChoiceCaller) -> int:
+            if isinstance(c, ExternKernelCaller):
+                return 0  # ATen/cuBLAS first
+            elif isinstance(c, CUDATemplateCaller):
+                return 2  # CUTLASS last
+            else:
+                return 1  # Triton and others in the middle
+
+        choices = sorted(choices, key=choice_priority)
+
         timings = {}
         for choice in choices:
             try:
@@ -3111,6 +3126,11 @@ class AlgorithmSelectorCache(PersistentCache):
         # skip prescreening if the number of candidates is too small
         if len(candidates) < 10:
             return []
+
+        # Include ATen choices in prescreening as fallback (#171094), ensuring
+        # valid fallback timings exist before potentially unstable CUTLASS kernels.
+        extern_choices = [c for c in choices if isinstance(c, ExternKernelCaller)]
+        candidates = extern_choices + candidates
 
         return candidates  # type: ignore[return-value]
 
